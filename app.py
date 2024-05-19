@@ -6,13 +6,16 @@ import streamlit as st
 from PIL import Image
 import pillow_heif
 
-from storage_utils import does_image_folder_exist
+from dc_storage_utils import does_image_folder_exist, upload_images_from_dir, upload_json_descriptions_file, download_images
 
 MAIN_DIR = os.path.dirname(os.path.realpath(__file__))
 JSON_DIR = os.path.join(MAIN_DIR, 'descr_base')
 IMAGE_BASE_PATH = os.path.join(MAIN_DIR, 'image_base')
 
 st.title("Description Creator")
+
+def upload_to_remote(img_dir):
+    upload_images_from_dir(img_dir)
 
 
 def make_entry(img_name, descr):
@@ -79,53 +82,43 @@ def clear_text():
     st.session_state["text_input"] = ""
 
 
-def submit_images_page():
-    st.write(st.session_state.image_key)
-    uploaded_files = []
-    uploaded_files = st.file_uploader("Choose images...", type=['png', 'heic'], accept_multiple_files=True)
+def upload_descr_file():
+    descr_file = os.path.join(JSON_DIR, st.session_state.image_key + '_inputs.json')
+    upload_json_descriptions_file(descr_file)
 
-    if uploaded_files:
-        st.session_state.image_key = str(uuid.uuid4().hex)[-5:]
-        img_dir = os.path.join(IMAGE_BASE_PATH, st.session_state.image_key)
-        if not os.path.exists(img_dir):
-            os.mkdir(img_dir)
 
-        for img_file in uploaded_files:
-            image = None
-            file_name, file_type = img_file.name.split('.')
-            file_type = file_type.lower()
-            if file_type == 'heic':
-                # Read the HEIC file
-                heif_file = pillow_heif.read_heif(img_file)
-                image = Image.frombytes(
-                    heif_file.mode, 
-                    heif_file.size, 
-                    heif_file.data, 
-                    "raw", 
-                    heif_file.mode, 
-                    heif_file.stride
-                )
-            elif file_type == 'png':
-                image = Image.open(img_file)
+def sync_local_with_remote():
+    #a5c0c
+    local_folder = os.path.join(IMAGE_BASE_PATH, st.session_state.image_key)
+    print('syncing')
+    download_images(st.session_state.image_key, local_folder)
 
-            #optionally, save image
-            save_path = os.path.join(img_dir, file_name + '.png')
-            image.save(save_path, "PNG")
-            st.write(f"Image saved as {save_path}")
-
-        st.session_state.submit_images_page = False
-        st.session_state.create_page = True
-        return True
-    else:
-        return False
 
 def previous():
     st.session_state.prev = True
 
+
 def handle_form_submission():
     st.session_state.submitted_descr = st.session_state.user_descr_input
     st.session_state.user_descr_input = ""
+
+    st.session_state.descriptions[st.session_state.curr_img_name] = st.session_state.submitted_descr
+
     add_to_json_file(st.session_state.image_names[st.session_state.image_index], st.session_state.submitted_descr)
+
+
+def sync_descr_dict():
+    descr_file = os.path.join(JSON_DIR, st.session_state.image_key + '_inputs.json')
+    if os.path.exists(descr_file):
+        # If file exists, load existing data
+        with open(descr_file, 'r') as file:
+            data = json.load(file)
+
+        if data:
+            for e in data:
+                img = e['expected'][0]
+                descr = e['prompt']
+                st.session_state.descriptions[img] = descr
 
 
 def create_descriptions_page():
@@ -163,6 +156,9 @@ def create_descriptions_page():
         #print(window_height)
     """
 
+    if 'create_descr_dict' not in st.session_state:
+        st.session_state.create_descr_dict = True
+
     if 'image_index' not in st.session_state:
         st.session_state.image_index = 0
     elif st.session_state.prev:
@@ -186,7 +182,11 @@ def create_descriptions_page():
     
     i = st.session_state.image_index
     st.session_state.curr_img_name = st.session_state.image_names[i]
-    img_path = os.path.join(img_dir, st.session_state.curr_img_name) 
+    img_path = os.path.join(img_dir, st.session_state.curr_img_name)
+
+    if str(st.session_state.curr_img_name) in st.session_state.descriptions:
+        st.write(st.session_state.descriptions[st.session_state.curr_img_name])
+
     displayed_image = Image.open(img_path)
 
     image_height = 500
@@ -199,6 +199,7 @@ def create_descriptions_page():
         
         descr_input_col, descr_submit_btn_col = st.columns([5, 1])
         with descr_input_col:
+            #TODO: populate with descr if exists
             user_descr_input = st.text_input(label="why is this required", label_visibility='collapsed',
                                              key="user_descr_input", placeholder="Enter a description for this image")
 
@@ -207,9 +208,11 @@ def create_descriptions_page():
 
     col1, col2, col3, col4, col5, col6 = st.columns(6)
     with col3:
-        prev_button = st.button('PREV', on_click=previous)
+        prev_button = st.button('<PREV', on_click=previous)
     with col4:
-        next_btn = st.button('NEXT')
+        next_btn = st.button('NEXT>')
+    with col6:
+        upload_descr_btn = st.button('UPLOAD', on_click=upload_descr_file)
 
     if next_btn:
         print('next')
@@ -219,6 +222,47 @@ def create_descriptions_page():
     #     #st.session_state.toggle = not st.session_state.toggle
     #     #clear_text()
 
+
+def submit_images_page():
+    st.write(st.session_state.image_key)
+    uploaded_files = []
+    uploaded_files = st.file_uploader("Choose images...", type=['png', 'heic'], accept_multiple_files=True)
+
+    if uploaded_files:
+        st.session_state.image_key = str(uuid.uuid4().hex)[-5:]
+        img_dir = os.path.join(IMAGE_BASE_PATH, st.session_state.image_key)
+        if not os.path.exists(img_dir):
+            os.mkdir(img_dir)
+
+        for img_file in uploaded_files:
+            image = None
+            file_name, file_type = img_file.name.split('.')
+            file_type = file_type.lower()
+            if file_type == 'heic':
+                # Read the HEIC file
+                heif_file = pillow_heif.read_heif(img_file)
+                image = Image.frombytes(
+                    heif_file.mode, 
+                    heif_file.size, 
+                    heif_file.data, 
+                    "raw", 
+                    heif_file.mode, 
+                    heif_file.stride
+                )
+            elif file_type == 'png':
+                image = Image.open(img_file)
+
+            #optionally, save image
+            save_path = os.path.join(img_dir, file_name + '.png')
+            image.save(save_path, "PNG")
+            st.write(f"Image saved as {save_path}")
+
+        upload_to_remote(img_dir)
+        st.session_state.submit_images_page = False
+        st.session_state.create_page = True
+        return True
+    else:
+        return False
 
 
 def main():
@@ -238,9 +282,11 @@ def main():
 
         if submit_key_button:
             if user_folder_exists_remote(user_key_input):
+                print('remote folder found')
                 st.session_state.start_page = False
                 st.session_state.create_page = True
                 st.session_state.image_key = user_key_input
+                sync_local_with_remote()
             else:
                 st.error("Inputted key {} not recognized")
         
@@ -259,9 +305,7 @@ def main():
                 print('continuing')
 
     
-
-
-
+#main loop
 if 'start_page' not in st.session_state:
     st.session_state.start_page = True
 
@@ -280,9 +324,8 @@ if 'image_names' not in st.session_state:
 if 'submitted_descr' not in st.session_state:
     st.session_state.submitted_descr = ""
 
-
-if 'descrs' not in st.session_state:
-    st.session_state.descrs = dict()
+if 'descriptions' not in st.session_state:
+    st.session_state.descriptions = dict()
 
 if 'toggle' not in st.session_state:
     st.session_state.toggle = True
@@ -295,4 +338,6 @@ if 'prev' not in st.session_state:
 
 if 'curr_image_name' not in st.session_state:
     st.session_state.curr_img_name = ""
+
+
 main()
