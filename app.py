@@ -235,7 +235,7 @@ def submit_images_page():
         st.session_state.image_key = str(uuid.uuid4().hex)[-5:]
         img_dir = os.path.join(IMAGE_BASE_PATH, st.session_state.image_key)
         if not os.path.exists(img_dir):
-            os.mkdir(img_dir)
+            os.makedirs(img_dir)
 
         for img_file in uploaded_files:
             image = None
