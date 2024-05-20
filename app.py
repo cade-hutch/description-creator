@@ -64,7 +64,7 @@ def user_folder_exists_remote(key):
             return True
         else:
             print('making local folder')
-            os.mkdir(local_folder)
+            os.makedirs(local_folder)
             #TODO: download images
             return True
 
