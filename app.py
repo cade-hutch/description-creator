@@ -29,6 +29,8 @@ def make_entry(img_name, descr):
 def add_to_json_file(img_name, descr):
     print(f"\nimage: {img_name}")
     print(f"descr: {descr}")
+    if not os.path.exists(JSON_DIR):
+        os.makedirs(JSON_DIR)
     json_file = os.path.join(JSON_DIR, st.session_state.image_key + '_inputs.json')
     if os.path.exists(json_file):
         # If file exists, load existing data
