@@ -229,7 +229,7 @@ def create_descriptions_page():
 def submit_images_page():
     st.write(st.session_state.image_key)
     uploaded_files = []
-    uploaded_files = st.file_uploader("Choose images...", type=['png', 'heic'], accept_multiple_files=True)
+    uploaded_files = st.file_uploader("Choose images...", type=['png', 'heic', 'jpeg'], accept_multiple_files=True)
 
     if uploaded_files:
         st.session_state.image_key = str(uuid.uuid4().hex)[-5:]
@@ -252,7 +252,7 @@ def submit_images_page():
                     heif_file.mode, 
                     heif_file.stride
                 )
-            elif file_type == 'png':
+            elif file_type == 'png' or file_type == 'jpeg':
                 image = Image.open(img_file)
 
             #optionally, save image
