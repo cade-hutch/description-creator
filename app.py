@@ -186,8 +186,9 @@ def create_descriptions_page():
     st.session_state.curr_img_name = st.session_state.image_names[i]
     img_path = os.path.join(img_dir, st.session_state.curr_img_name)
 
-    if str(st.session_state.curr_img_name) in st.session_state.descriptions:
-        st.write(st.session_state.descriptions[st.session_state.curr_img_name])
+    #TODO
+    # if str(st.session_state.curr_img_name) in st.session_state.descriptions:
+    #     st.write(st.session_state.descriptions[st.session_state.curr_img_name])
 
     displayed_image = Image.open(img_path)
 
