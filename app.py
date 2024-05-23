@@ -102,12 +102,12 @@ def previous():
 
 def handle_form_submission():
     st.session_state.submitted_descr = st.session_state.user_descr_input
+    if st.session_state.submitted_descr:
+        st.session_state.descriptions[st.session_state.curr_img_name] = st.session_state.submitted_descr
+        add_to_json_file(st.session_state.image_names[st.session_state.image_index], st.session_state.submitted_descr)
+
     st.session_state.user_descr_input = ""
-
-    st.session_state.descriptions[st.session_state.curr_img_name] = st.session_state.submitted_descr
-
-    add_to_json_file(st.session_state.image_names[st.session_state.image_index], st.session_state.submitted_descr)
-
+    
 
 def sync_descr_dict():
     descr_file = os.path.join(JSON_DIR, st.session_state.image_key + '_inputs.json')
