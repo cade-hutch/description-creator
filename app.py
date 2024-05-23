@@ -227,7 +227,7 @@ def create_descriptions_page():
 
 
 def submit_images_page():
-    st.write(st.session_state.image_key)
+    st.write(f"Your Image Key: {st.session_state.image_key}")
     uploaded_files = []
     uploaded_files = st.file_uploader("Choose images...", type=['png', 'heic', 'jpeg'], accept_multiple_files=True)
 
@@ -304,6 +304,7 @@ def main():
     if st.session_state.submit_images_page:
 
         if submit_images_page():
+            st.success(f"Saved to Image Key: {st.session_state.image_key}")
             if st.button("Continue"):
                 print('continuing')
 
