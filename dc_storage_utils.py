@@ -48,6 +48,8 @@ def init_app(init_name='app'):
 
 
 def sync_local_descr_files_to_db():
+    if not os.path.exists(JSON_DIR):
+        return
     bucket = storage.bucket('image-finder-demo.appspot.com')
     print('APP STARTUP: syncing new descr files in local to db')
     blobs = bucket.list_blobs(prefix='dc_json/')
