@@ -11,6 +11,8 @@ from firebase_admin import credentials, firestore, storage
 from PIL import Image
 
 curr_dir = os.path.dirname(os.path.realpath(__file__))
+JSON_DIR = os.path.join(curr_dir, 'descr_base')
+
 keyfile_path = '/Users/cadeh/Desktop/MyCode/Workspace/image_finder_demo/image-finder-demo-firebase-adminsdk-3kvua-934cc33dbb.json'
 if os.path.exists(keyfile_path):
     cred_input = keyfile_path
@@ -43,6 +45,24 @@ bucket = storage.bucket('image-finder-demo.appspot.com')
 
 def init_app(init_name='app'):
     print('init app dud')
+
+
+def sync_local_descr_files_to_db():
+    bucket = storage.bucket('image-finder-demo.appspot.com')
+    print('APP STARTUP: syncing new descr files in local to db')
+    blobs = bucket.list_blobs(prefix='dc_json/')
+    db_descr_files = []
+    local_descr_files = [file_name for file_name in os.listdir(JSON_DIR) if file_name.endswith('_inputs.json')]
+    for blob in list(blobs):
+        db_file = str(blob.name).split('/')[1]
+        db_descr_files.append(db_file)
+
+    for lf in local_descr_files:
+        if lf not in db_descr_files:
+            filepath = os.path.join(JSON_DIR, lf)
+            blob = bucket.blob(os.path.join('dc_json', lf))
+            blob.upload_from_filename(filepath)
+            print(f'syncing local file {lf} to database')
 
 
 def upload_images_from_list(image_paths):

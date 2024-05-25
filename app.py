@@ -6,13 +6,18 @@ import streamlit as st
 from PIL import Image
 import pillow_heif
 
-from dc_storage_utils import does_image_folder_exist, upload_images_from_dir, upload_json_descriptions_file, download_images
+from dc_storage_utils import does_image_folder_exist, upload_images_from_dir, upload_json_descriptions_file, download_images, sync_local_descr_files_to_db
 
 MAIN_DIR = os.path.dirname(os.path.realpath(__file__))
 JSON_DIR = os.path.join(MAIN_DIR, 'descr_base')
 IMAGE_BASE_PATH = os.path.join(MAIN_DIR, 'image_base')
 
 st.title("Description Creator")
+
+
+def startup_sync_local_descrs_to_db():
+    sync_local_descr_files_to_db()
+
 
 def upload_to_remote(img_dir):
     upload_images_from_dir(img_dir)
@@ -90,7 +95,9 @@ def upload_descr_file():
 
 
 def sync_local_with_remote():
-    #a5c0c
+    """
+    For image folders
+    """
     local_folder = os.path.join(IMAGE_BASE_PATH, st.session_state.image_key)
     print('syncing')
     download_images(st.session_state.image_key, local_folder)
@@ -299,16 +306,14 @@ def main():
 
     if st.session_state.create_page:
         create_descriptions_page()
-                
 
     if st.session_state.submit_images_page:
-
         if submit_images_page():
             st.success(f"Saved to Image Key: {st.session_state.image_key}")
             if st.button("Continue"):
                 print('continuing')
 
-    
+
 #main loop
 if 'start_page' not in st.session_state:
     st.session_state.start_page = True
@@ -342,6 +347,10 @@ if 'prev' not in st.session_state:
 
 if 'curr_image_name' not in st.session_state:
     st.session_state.curr_img_name = ""
+
+if 'synced_local_to_db'not in st.session_state:
+    st.session_state.synced_local_to_db = True
+    startup_sync_local_descrs_to_db()
 
 
 main()
